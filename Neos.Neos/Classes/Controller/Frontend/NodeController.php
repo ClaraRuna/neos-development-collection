@@ -20,6 +20,8 @@ use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindSubtreesFilte
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\Projection\ContentGraph\NodePath;
 use Neos\ContentRepository\Core\NodeType\NodeTypeConstraintParser;
+use Neos\Neos\Domain\Model\EditPreviewMode;
+use Neos\Neos\Domain\Repository\EditPreviewModeRepository;
 use Neos\Neos\FrontendRouting\NodeAddressFactory;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateIds;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
@@ -111,7 +113,14 @@ class NodeController extends ActionController
     protected $nodeSiteResolvingService;
 
     /**
+     * @Flow\Inject
+     * @var EditPreviewModeRepository
+     */
+    protected $editPreviewModeRepository;
+
+    /**
      * @param string $node Legacy name for backwards compatibility of route components
+     * @param string|null $editPreviewMode Rendering mode like "rawContent" defaults to defaultEditPreviewMode from settings
      * @throws NodeNotFoundException
      * @throws \Neos\Flow\Mvc\Exception\StopActionException
      * @throws \Neos\Flow\Mvc\Exception\UnsupportedRequestTypeException
@@ -122,7 +131,7 @@ class NodeController extends ActionController
      * with unsafe requests from widgets or plugins that are rendered on the node
      * - For those the CSRF token is validated on the sub-request, so it is safe to be skipped here
      */
-    public function previewAction(string $node): void
+    public function previewAction(string $node, string $editPreviewMode = null): void
     {
         $visibilityConstraints = VisibilityConstraints::frontend();
         if ($this->privilegeManager->isPrivilegeTargetGranted('Neos.Neos:Backend.GeneralAccess')) {
@@ -166,6 +175,9 @@ class NodeController extends ActionController
         $this->view->assignMultiple([
             'value' => $nodeInstance,
             'site' => $site,
+            'editPreviewMode' => $editPreviewMode
+                ? $this->editPreviewModeRepository->findByName($editPreviewMode)
+                : $this->editPreviewModeRepository->findDefault()
         ]);
 
         if (!$nodeAddress->isInLiveWorkspace()) {
